@@ -1,6 +1,27 @@
-# image-template
+# bazzite-nix
 
-This repository is meant to be a template for building your own custom [bootc](https://github.com/bootc-dev/bootc) image. This template is the recommended way to make customizations to any image published by the Universal Blue Project.
+Bazzite stable (`ghcr.io/ublue-os/bazzite:stable`) plus one thing: an empty
+top-level `/nix` directory.
+
+That directory is the only change. On composefs the root is read-only, so `/nix`
+cannot be created at runtime; baking it into the image gives every deployment a
+mount point. The [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer)
+then skips its `nix-directory.service` (`ConditionPathExists=!/nix`) and only
+installs `nix.mount`, which bind-mounts `/var/home/nix` onto `/nix`. The store
+lives in `/var/home/nix`, outside the image, and survives OS updates.
+
+After switching to this image, install Nix once:
+
+```sh
+curl -fsSL https://install.determinate.systems/nix | sh -s -- install --prefer-upstream-nix
+```
+
+Everything below is the upstream `ublue-os/image-template` documentation, kept
+for reference.
+
+---
+
+This repository is based on the Universal Blue [image-template](https://github.com/ublue-os/image-template), the recommended way to make customizations to any image published by the Universal Blue Project.
 
 # Community
 
