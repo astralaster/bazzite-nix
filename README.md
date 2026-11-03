@@ -1,7 +1,7 @@
 # bazzite-nix
 
-Bazzite stable (`ghcr.io/ublue-os/bazzite:stable`) plus one thing: an empty
-top-level `/nix` directory.
+Bazzite plus one thing: an empty top-level `/nix` directory. Built from both
+streams: `ghcr.io/ublue-os/bazzite:stable` and `ghcr.io/ublue-os/bazzite:testing`.
 
 That directory is the only change. On composefs the root is read-only, so `/nix`
 cannot be created at runtime; baking it into the image gives every deployment a
@@ -14,6 +14,20 @@ After switching to this image, install Nix once:
 
 ```sh
 curl -fsSL https://install.determinate.systems/nix | sh -s -- install --prefer-upstream-nix
+```
+
+## Tags
+
+| tag | base |
+|---|---|
+| `latest`, `stable`, `stable-YYYYMMDD`, `stable-<sha>` | `ghcr.io/ublue-os/bazzite:stable` |
+| `testing`, `testing-YYYYMMDD`, `testing-<sha>` | `ghcr.io/ublue-os/bazzite:testing` |
+
+`latest` is an alias for `stable`. Switch streams with:
+
+```sh
+sudo bootc switch ghcr.io/astralaster/bazzite-nix:stable
+sudo bootc switch ghcr.io/astralaster/bazzite-nix:testing
 ```
 
 Everything below is the upstream `ublue-os/image-template` documentation, kept

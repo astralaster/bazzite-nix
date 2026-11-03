@@ -100,13 +100,15 @@ build $target_image=image_name $tag=default_tag:
 
     BUILD_ARGS=()
     LABELS=()
+    # Selected by the CI matrix; defaults to stable for local builds.
+    BUILD_ARGS+=("--build-arg" "BASE_IMAGE=${BASE_IMAGE:-ghcr.io/ublue-os/bazzite:stable}")
     if [[ -z "$(git status -s)" ]]; then
         GIT_SHA=$(git rev-parse --short HEAD)
         LABELS+=("--label" "io.artifacthub.package.readme-url=https://raw.githubusercontent.com/{{ repo_organization }}/{{ image_name }}/${GIT_SHA}/README.md")
         LABELS+=("--label" "org.opencontainers.image.documentation=https://raw.githubusercontent.com/{{ repo_organization }}/{{ image_name }}/${GIT_SHA}/README.md")
         LABELS+=("--label" "org.opencontainers.image.source=https://github.com/{{ repo_organization }}/{{ image_name }}/blob/${GIT_SHA}/Containerfile")
         LABELS+=("--label" "org.opencontainers.image.url=https://github.com/{{ repo_organization }}/{{ image_name }}/tree/${GIT_SHA}")
-        LABELS+=("--label" "org.opencontainers.image.version={{ default_tag }}.$(date +%Y%m%d)-${GIT_SHA}")
+        LABELS+=("--label" "org.opencontainers.image.version=${tag}.$(date +%Y%m%d)-${GIT_SHA}")
     fi
 
     # Image metadata for https://artifacthub.io/ - This is optional but is highly recommended so we all can get a index of all the custom images
@@ -206,10 +208,8 @@ generate-build-tags $target_image=image_name $tag=default_tag:
         GIT_SHA=$(git rev-parse --short HEAD)
         BUILD_TAGS+=("${tag}-${GIT_SHA}")
         BUILD_TAGS+=("${tag}-${DATE}-${GIT_SHA}")
-        BUILD_TAGS+=("${DATE}-${GIT_SHA}")
     fi
 
-    BUILD_TAGS+=("${DATE}")
     BUILD_TAGS+=("${tag}")
     BUILD_TAGS+=("${tag}-${DATE}")
 

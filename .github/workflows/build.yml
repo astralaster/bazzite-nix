@@ -16,14 +16,33 @@ on:
 env:
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"  # do not edit
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.brand_name}}-${{ inputs.stream_name }}
-  cancel-in-progress: true
-
 jobs:
   build_push:
-    name: Build and push image
+    name: Build ${{ matrix.stream }} image
     runs-on: ubuntu-26.04
+
+    # Per-stream group: without matrix.stream the two jobs would cancel each other.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ matrix.stream }}
+      cancel-in-progress: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # latest tracks stable, testing is a separate tag
+          - stream: stable
+            base: ghcr.io/ublue-os/bazzite:stable
+            tag: stable
+            extra_tags: latest
+          - stream: testing
+            base: ghcr.io/ublue-os/bazzite:testing
+            tag: testing
+            extra_tags: ""
+
+    env:
+      BASE_IMAGE: ${{ matrix.base }}
+      TAG: ${{ matrix.tag }}
 
     permissions:
       contents: read
@@ -53,13 +72,6 @@ jobs:
 
           echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
 
-      - name: Default Tag
-        id: gen-default-tag
-        run: |
-          DEFAULT_TAG=$(just generate-default-tag)
-
-          echo "DEFAULT_TAG=${DEFAULT_TAG}" >> $GITHUB_ENV
-
       - name: Prepare environment
         run: |
           # Lowercase the image uri https://github.com/macbre/push-to-ghcr/issues/12
@@ -72,7 +84,7 @@ jobs:
         run: |
           just build \
             ${IMAGE_NAME} \
-            ${DEFAULT_TAG}
+            ${TAG}
 
       # This is optional, this provides smaller delta updates
       - name: Rechunk with rpm-ostree
@@ -80,7 +92,7 @@ jobs:
         run: |
           just ostree-rechunk \
             ${IMAGE_NAME} \
-            ${DEFAULT_TAG}
+            ${TAG}
 
       # If you are feeling adventurous, use the new distro agnostic rechunker
       # https://github.com/coreos/chunkah
@@ -90,14 +102,19 @@ jobs:
       #  run: |
       #    just rechunk \
       #      ${IMAGE_NAME} \
-      #      ${DEFAULT_TAG}
+      #      ${TAG}
 
       - name: Generate Build Tags
         id: gen-build-tags
         run: |
           alias_tags="$(just generate-build-tags \
                         ${IMAGE_NAME} \
-                        ${DEFAULT_TAG})"
+                        ${TAG})"
+
+          # latest is an alias for stable; the testing stream has no extra tag.
+          if [[ -n "${{ matrix.extra_tags }}" ]]; then
+            alias_tags="${alias_tags} ${{ matrix.extra_tags }}"
+          fi
 
           echo "Tags for this Action..."
           echo "${alias_tags}"
@@ -110,7 +127,7 @@ jobs:
         run: |
           just tag-images \
             "${IMAGE_NAME}" \
-            "${DEFAULT_TAG}" \
+            "${TAG}" \
             "${ALIAS_TAGS}"
 
       # These `if` statements are so that pull requests for your custom images do not make it publish any packages under your name without you knowing
